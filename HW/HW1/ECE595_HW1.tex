@@ -1,0 +1,499 @@
+\documentclass[fleqn]{article}
+\usepackage[left=2cm, right=2cm, top=2cm, bottom=2cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amsfonts, amsthm, amssymb}
+\usepackage[super, comma]{natbib} % for bibliography stuff
+\usepackage{bibentry} % for bibliography stuff
+\usepackage[shortlabels]{enumitem} % reducing spaces in enumerated lists
+\usepackage{algorithm} % for algorithms
+\usepackage[noend]{algpseudocode} % for algorithms
+\usepackage[T1]{fontenc}
+\usepackage{bm}
+
+
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+
+\graphicspath{{figs/}}
+
+% New Operators
+\DeclareMathOperator*{\argmaxfull}{argmax}
+\DeclareMathOperator*{\argmax}{max}
+\DeclareMathOperator*{\argminfull}{argmin}
+\DeclareMathOperator*{\argmin}{min}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert} % for norm
+
+
+\title{
+  ECE 595 Machine Learning II \\
+  \large Homework 1 : Fundamentals Aspects of Deep Forward Networks}
+\author{Murali Krishnan Rajasekharan Pillai}
+\date{September 2019}
+
+\begin{document}
+
+\maketitle
+
+\section*{Question 1 (XOR Functions)}
+\begin{enumerate}[a)]
+    \item 
+    It is not possible for a linear function to learn the XOR function in the \(\mathbb{R}^2\). The linear model just
+    outputs 0.5 everywhere. This can be explained more intuitively in the following example:
+    
+    \vspace{50 mm}
+    
+    
+    \item
+    Yes, it is possible for a feed-forward network to correctly learn the XOR function. However, this is dependent 
+    on whether we use linear or non-linear functions to define the features. Using linear functions to represent the 
+    features means that the function will not be able to learn a boundary to separate the two sets of data. This 
+    was demonstrated in the previous section.
+    
+    However, we will be able to learn the XOR function by using the following network using the ReLU activation 
+    function:
+    \begin{equation*}
+    f(x; W, c, w, b) = w^T \argmax \{0, W^Tx + c\} + b
+    \end{equation*}
+    Now, we can get the solution for the XOR problem with the following values for the parameters:
+    $$W = \begin{bmatrix}
+    1 & 1 \\
+    1 & 1\\
+    \end{bmatrix}$$
+    
+    $$c = \begin{bmatrix}
+    0 \\
+    -1 \\
+    \end{bmatrix}$$
+    
+    $$w = \begin{bmatrix}
+    1 \\
+    -2 \\
+    \end{bmatrix}$$
+    and $b = 0$
+    
+    Let $\bm{X}$ be the design matrix containing all 4 points in the binary input space, (one example per row):
+    $$\bm{X} = \begin{bmatrix}
+    0 & 0 \\
+    0 & 1 \\
+    1 & 0 \\
+    1 & 1
+    \end{bmatrix}$$
+    
+    The first step of the NN is to perform $\bm{XW}$:
+    $$\bm{XW} = \begin{bmatrix}
+    0 & 0 \\
+    1 & 1 \\
+    1 & 1 \\
+    2 & 2
+    \end{bmatrix}$$
+    
+    Now we add the bias unit $c$ to obtain:
+    $$\begin{bmatrix}
+    0 & -1 \\
+    1 & 0 \\
+    1 & 0 \\
+    2 & 1
+    \end{bmatrix}$$
+    
+    Then we perform the ReLU activation to obtain:
+    $$\begin{bmatrix}
+    0 & 0 \\
+    1 & 0 \\
+    1 & 0 \\
+    2 & 1
+    \end{bmatrix}$$
+    
+    Finally we multiply with the weight vectr $w$:
+    $$\begin{bmatrix}
+    0 \\
+    1 \\
+    1 \\
+    0
+    \end{bmatrix}$$
+    
+    This is essentially the XOR function.
+\end{enumerate}
+
+
+\section*{Question 2 (RBF Kernel)}
+The radial basis function kernel, also called the RBF Kernel or the Gaussian Kernel assumes the following form:
+\begin{equation*}
+    K_{RBF} (x, x') = exp[-\gamma \norm{x- x'}^2_2]
+\end{equation*}
+We have to prove that the RBF kernel projects vectors into an infinite dimensional space. Since we deal with Euclidean vectors, this space is $\mathbb{R}^{\infty}$.
+\begin{proof}
+  Let $x, x' \in \mathbb{R}^n$ and assuming $\gamma =\frac{1}{2}$. So,
+  \begin{align*}
+    K_{RBF}(x, x') &= exp\left[-\frac{1}{2} \norm{ x - x'}^2_2 \right]\\
+    &= exp\left[-\frac{1}{2} \langle x - x', x - x' \rangle \right] \\
+    &= exp\left[-\frac{1}{2} (\langle x, x \rangle + \langle x', x'\rangle - 2 \langle x , x'\rangle)\right]\\
+    &= exp\left[-\frac{1}{2} (\norm{x}^2_2 + \norm{x'}^2_2)\right] \cdot exp\left[\left(-\frac{1}{2}\right) (-2 \langle x, x' \rangle)\right] \\
+    &=  C \cdot exp\left[\left(-\frac{1}{2}\right) (-2 \langle x, x'\rangle)\right] && C := exp\left[-\frac{1}{2} (\norm{x}^2_2 + \norm{x'}^2_2)\right] \text{is a constant.}\\ 
+    &= C \cdot \sum_{n=0}^{\infty} \frac{\langle x,x' \rangle ^n}{n!}  && \text{Taylor Series expansion of } exp(x)\\
+    &&\qedhere
+  \end{align*}
+\end{proof}
+Hence we can see that the RBF Kernel corresponds to a dot-product in an infinite-dimensional vector space.
+
+
+\section*{Question 3 (Gradient Based Learning)}
+
+\begin{enumerate}[a)]
+    \item Unlike Linear Models (like Logistic Regression or SVMs), the non-linearity of the Neural Networks (NNs) causes most cost functions to be non-convex. Due to the objective functions being non-convex, there is no guarantee for solving a global optima.  However, iterative gradient-based optimizers can drive down the cost function to a very low value by updating the parameters. They use the direction of the steepest descent to iteratively progress towards an optima, giving us an optimal / "trained" set of parameters for the NNs. Hence the parameters of the model are updated according to the first-order Taylor Series expansion:
+    \begin{equation*}
+        \theta_{new} = \theta_{old} - \alpha \cdot \frac{\partial J(\theta)}{\partial \theta}
+    \end{equation*}
+    
+    
+    \item 
+    
+    As we can see from the above equation, the model parameters don't get updated if $\frac{\partial J(\theta)}{\partial \theta} = 0$. This is reflected as a "\textit{flat}" region in the parameter space. This is also said to "\textit{saturate}". In this case the learning algorithm no longer has a guide for how to improve the corresponding parameters.
+    
+    \vspace{40 mm}
+    
+    Instead it is better to use a difference approach that ensure that there is always a strong gradient whenever the model has a wrong answer.
+    
+    \vspace{40 mm}
+\end{enumerate}
+
+\section*{Question 4 (Cross Entropy)}
+
+\begin{enumerate}[a)]
+    \item 
+    Suppose we have a set of independent observations 
+    $ \{(x_1, y_1), \cdots (x_n, y_n)\} \subset \mathcal{X} \times \mathcal{Y}$, sampled from $p_{\text{data}}$. \\
+    $\mathcal{X}$ is the input space \& $\mathcal{Y}$ is the output space. \\
+    \begin{proof}
+        We can define the maximum likelihood as:
+        \begin{align*}
+            P_{\text{MLE}}(x, y) &= \argmaxfull_{\theta}~ P_{\mathcal{X}, \mathcal{Y}}(x, y | \theta)\\
+            &= \argmaxfull_{\theta}~ \prod_{i=i}^n P(y_i | x_i, \theta) \\
+            \log (P_{\text{MLE}}(x, y)) &= \argmaxfull_{\theta}~ log\big(\prod_{i=1}^n P(y_i | x_i, \theta)\big)\\
+            &= \argmaxfull_{\theta}~ \sum_{i=1}^n log\big(P(y_i | x_i, \theta)\big)\\
+            \frac{1}{n} \cdot \log (P_{\text{MLE}}(x, y)) &= \frac{1}{n} \cdot \argmaxfull_{\theta}~ \sum_{i=1}^n log\big(P(y_i | x_i, \theta)\big)\\
+            &= \argmaxfull_{\theta}~ \mathbb{E}_{x, y ~ p_{\text{data}}}\big[log\big(P(y_i | x_i, \theta)\big)\big]\\
+            -\frac{1}{n} \cdot \log (P_{\text{MLE}}(x, y)) &=  \argminfull_{\theta}~ \mathbb{E}_{x, y ~ p_{\text{data}}}\big[-log\big(P(y_i | x_i, \theta)\big)\big] \qedhere\\
+        \end{align*}
+    \end{proof}
+   
+    \item 
+    We expect the cross-entropy cost to work "\textit{better}" with output units that apply an exponential function. 
+    Hence softmax or sigmoidal output units should work well with cross-entropy loss.     
+\end{enumerate}
+
+\section*{Question 5 (Sigmoid / Softmax)}
+
+\begin{enumerate}[a)]
+    \item 
+    The Sigmoid and Softmax functions are defined as follows:
+    \begin{equation*}
+            \text{sigmoid}(z_i) = \sigma(z_i)= \frac{1}{1 + \text{exp}(y_i \cdot z_i)}\\
+    \end{equation*}
+
+    \begin{equation*}
+            \text{softmax}(z_i) = \frac{\text{exp}(y_i \cdot z_i)}{\sum_{j=1}^k \text{exp}(y_j \cdot z_j)}\\
+    \end{equation*}
+    
+    The sigmoid can be motivated by constructing an unnormalized probability distribution $\tilde{P}(y)$, which 
+    doesn't sum to 1. We can then divide by an appropriate constant to obtain a valid probability distribution. 
+    Assuming that the unnormalized log probabilities are linear in $y \text{ and } z$. We see that the normalized 
+    distribution yields a Bernoulli distribution controlled by a sigmoidal transformation of $z$:
+    
+    \begin{equation*}
+    	\begin{split}
+		\log\tilde{P}(y) &= yz,\\
+		\tilde{P}(y) &= \text{exp}(yz)\\
+		P(y) &= \frac{\text{exp}(yz)}{\sum_{y'=0}^1 \text{exp}(y'z)}\\
+		P(y) &= \sigma((2y-1)z)
+	\end{split}
+    \end{equation*}
+    
+    This approach is natural to use with maximum likelihood learning. 
+    
+    To generalize the above method for the case of discrete variables with $n$ values, a vector $\bm{\hat{y}}$, 
+    with $\hat{y}_i = \text{P}\left(y = i | \bm{x}\right)$. This now generalizes to the multi-nomial distribution. This is 
+    what the softmax function performs.
+    First, a linear layer predicts unnormalized log probabilities:
+    $$z = W^Th + b,$$
+    where $z_i = \log{}\tilde{P}(y=i | x)$. The softmax function can then exponentiate and normalize $z$ to obtain 
+    the desired $\hat{y}$. Formally the softmax function is given by:
+    $$
+    \text{softmax}(z)_i = \frac{\text{exp} (z_i)}{\sum_j \text{exp}(z_j)}
+    $$
+    
+       \item 
+       Sigmoid and Softmax are extremely beneficial in gradient based learning because they help prevent the 
+       occurrence of saturation. When using Sigmoid/Softmax function in conjunction with the cross-entropy loss, 
+       the model only saturates when the model already has the right answer: 
+       \begin{enumerate}[i)]
+       \item when $y=i$  is the correct label and $z$ is very positive or 
+       \item when $y=i$ is a wrong label and $z$ is very negative.
+       \end{enumerate}
+\end{enumerate}
+
+\section*{Question 6 (Linear Activation Functions)}
+
+If every hidden unit in the neural network (NN) are linear, then the model as a whole will be linear. Hence the linear activation function is not a good idea if applied to all hidden layers. However, using linear activation on some layers can be beneficial. This can be demonstrated as follows:
+
+\vspace{80 mm}
+
+\section*{Question 7 (ReLU Activation)}
+\begin{enumerate}[a)]
+    \item 
+    ReLU activation function stands for Rectified Linear Units.\\
+    
+    \begin{equation*}
+        g(z) = \argmax\{0, z\}
+    \end{equation*}
+    These units are similar to linear input, except they are inactive when $z < 0$. They are typically used on top of 
+    an affine transformation.
+    
+    \item 
+    One drawback of the ReLU activation function is that they cannot learn via gradient based methods on 
+    examples for which activation is zero. The immediate generalization of the ReLU activation function makes 
+    sure that the learning algorithm can receive gradient everywhere. The 2 generalizations to discuss are 
+    \textbf{absolute value ReLU} and \textbf{parametric ReLU}.
+    These generalization of the ReLU's are based on using a non-zero slope $\alpha_i$, when $z_i < 0, \ni h_i = 
+    g(z, \alpha)_i = \argmax(0, z_i) + \alpha_i \argmin(0, z_i)$
+    \begin{enumerate}[i)]
+    \item $\alpha_i = -1$: This obtains the $\textbf{absolute value ReLU}$, or $g(z) = |z|$. It is used for object 
+    recognition from images, where it makes sense to seek features that are invariant under a polarity reversal of 
+    the input illumination.
+    \item $\alpha_i \text{ is a learnable parameter}$: Instead of assigning a value to $\alpha_i$, the
+    $\textbf{parametric-ReLU}$ adds $\alpha_i$ as a variable for the neural network to learn. This fixes the 
+    problem of unnecessary sparsity introduced by pure-ReLU.
+    \end{enumerate}
+    
+    \item
+    $\textbf{Maxout Units}$ generalize ReLUs further. Instead of applying an element-wise function $g(z)$,
+    maxout units divide $z$ into groups of $k$ values. Each maxout unit then outputs the maximum element of 
+    one of these groups:
+    \vspace{30 mm}
+    \begin{equation*}
+    	g(z)_i = \argmax_{j \in \mathbb{G}^{(i)}} z_j, 
+    \end{equation*}
+    where $\mathbb{G}^{(i)}$ is the set of indices unto the inputs for group $i, \{(i-1)k+1, \cdots, ik\}$. This 
+    provides a way of learning a piecewise linear function that responds to multiple directions in the input 
+    $\bm{x}$ space.\\
+    
+    Maxout units are mainly used in dimensionality reduction, however they increase the complexity of the 
+    hypothesis space. If the features captured by $n$ different linear filters can be summarized without losing 
+    information by taking the max over each group of $k$ features, then the next layer can get by with $k$ times 
+    fewer weights.
+    
+\end{enumerate}
+\section*{Question 8 (Universal Approximation)}
+
+\begin{enumerate}
+    \item 
+    The \textbf{Universal Approximation Theorem} states that, a feedforward network with a linear output layer and at-least one hidden layer with any "\textit{squashing}" activation function (such as \textit{sigmoid()}, \textit{tanh()}) can approximate any \textbf{Borel measurable function} from one finite-dimensional space to another, with any desired non-zero amount of error, provided that the network is given enough hidden units. \hfill \break
+    In other words, any continuous function on a closed and bounded subset of $\mathbb{R}^n$, is Borel measurable and therefore maybe approximated by a neural network.
+    
+    \item 
+    The generalization of the Universal Approximation Theorem states that, shallow networks with a broad family of non-polynomial activation functions (including \textit{ReLU}) have universal approximation properties. In other words, a sufficiently wide network can represent any function. \hfill \break
+    This generalisation allows us to use deep neural networks that have multiple hidden layers.
+    
+    \item
+    In many cases the number of hidden units required by the shallow model is exponential in $d$, where $d$ is the depth of the neural network. Hence the number of parameters in the model would also be exponential in $d$. \hfill \break \\
+    Choosing a deep model encodes a very general belief that the function we want to learn should involve composition of several simpler functions. Deep architectures also express a useful prior over the space of functions that the model learns. This results in better generalization for a wide variety of tasks.
+    \hfill \break \\
+    By increasing the depth of the network we are increasing the complexity of the hypothesis space. This means 
+    that the network has more parameters which need training, which would increase the difficulty in training 
+    optimization.
+\end{enumerate}
+
+
+\newpage
+
+\section*{Question 9 (Backpropagation)}
+
+\begin{enumerate}[a)]
+    \item 
+    We have $f: \mathbb{R}^n \rightarrow \mathbb{R}^m$, and $g: \mathbb{R}^m \rightarrow \mathbb{R}$, and $h = g \circ f$
+    
+    \begin{proof}
+        By definition, this can be written as:
+        h = g(u) \\
+        u = f(x) \\
+        \begin{align*}
+            h(x) &= g(f(x))\\
+            \nabla_x h(x) &= \nabla_x f(x) ^T ~ \nabla_x g(f(x)) && \{\because (g \circ f)'(x) = g'(f(x)) \cdot f'(x)\} \\
+            &\qedhere
+        \end{align*}
+    \end{proof}
+    
+    (Illustrate the components of each vector/matrix)??
+    
+    \item
+    Assume $J : \mathbb{R}^d \rightarrow \mathbb{R}$ be defined as:
+    $$J(u_1, \cdots u_d) = f_l \circ f_{l-1} \circ \cdots \circ f_1(u_1, \cdots u_d)$$
+    \begin{enumerate}[i)]
+        \item 
+        The pseudo-code for the forward propagation algorithm to compute $\nabla J(u_1, \cdots , u_d)$ is as follows:
+        \begin{algorithm}
+            \caption{A procedure that performs the computations mapping $n_i$ inputs $u^{(1)}$ to $u^{(n_i)}$ to an output $u^{(n)}$. This defines a computational graph where each node computes numerical value $u^{(i)}$ by applying a function $f^{(i)}$ to the set of arguments $\mathbb{A}^{(i)}$ that comprises the values of previous nodes $u^{(j)}, j < i$ with $j \in Pa(u^{(i)})$. The input to the computational graph is the vector $\textbf{x}$, and is set into the first $n_i$ nodes $u^{(1)}$ to  $u^{(n_i)}$. The output of the computational graph is read off the last (output) node $u^{(n)}$.}\label{forwardpropJ}
+            \begin{algorithmic}[1]
+                \For{$i = 1, \cdots, n_i$}
+                \State $u^{(i)} \gets x_i$
+                \EndFor{$\textbf{end for}$}
+                \For{$i = n_i + 1, \cdots, n$}
+                \State $\mathbb{A}^{(i)} \gets \{u^{(j)} | j \in Pa(u^{(i)})\}$
+                \State $u^{(i)} \gets f^{(i)}(\mathbb{A}^{(i)})$
+                \EndFor{$\textbf{end for}$}
+                \State \textbf{return} $u^{(n)}$
+            \end{algorithmic}
+        \end{algorithm}
+        \hfill \break
+        The pseudo-code for the backward propagation algorithm to compute $\nabla J(u_1, \cdots , u_d)$ is as follows:
+        \begin{algorithm}
+            \caption{Simplified version of the back-propagation algorithm for computing the derivatives of $u^{(n)}$ w.r.t. the variables in the graph. This algorithm computes the derivatives of all nodes in the graph. The computational cost of this algorithm is proportional to the number of edges in the graph. Each $\frac{\partial u^{(i)}}{\partial u^{(j)}}$ is a function of the parents $u^{(j)}$ of $u^{(i)}$, thus linking the nodes of the forward graph to those added for the back-propagation graph.}\label{backpropJ}
+            \begin{algorithmic}[1]
+                \State Run forward propagation to obtain activations of the network
+                \State Initialize $\texttt{grad-table}$, a data structure that will store the derivatives
+                that have been computed.\\
+                The entry $\texttt{grad-table} [u^{(i)}]$ will store the
+                computed value of $\frac{\partial u^{(n)}}{\partial u^{(i)}}$
+                \State $\texttt{grad-table}[u^{(n)}] \gets 1 $
+                \For{$j = n-1$ down to $1$}
+                \State The next line computes 
+                $\frac{\partial u^{(n)}}{\partial u^{(j)}} = \sum_{i:j \in Pa(u^{(i)})} \frac{\partial u^{(n)}}{\partial u^{(i)}}
+                \frac{\partial u^{(i)}}{\partial u^{(j)}}$,
+                using stored valuesL
+                \State $\texttt{grad-table}[u^{(j)}] \gets \sum_{i:j \in Pa(u^{(i)})} \texttt{grad-table}[u^{(i)}]
+                \frac{\partial u^{(i)}}{\partial u^{(j)}}$
+                \EndFor{$\textbf{end for}$}
+                \State \textbf{return} $\{\texttt{grad-table}[u^{(i)}] | i = 1, \cdots, n_i\}$
+            \end{algorithmic}
+        \end{algorithm}
+        
+        \item
+        The amount of computation required for performing the back-propagation scales linearly with the number of edges in the computational graph for the forward propagation $\mathcal{G}$. The computation for each edge corresponds to computing a partial derivative (of one node w.r.t one of it's parents) as well as performing one multiplication and one addition. Hence is of the order $\mathcal{O}(ld)$ ??
+    \end{enumerate}
+
+\item
+Considering a multi-layer feedforward network $f: \mathbb{R}^d \rightarrow \mathbb{R}^o$, described by:
+	\begin{equation*}
+	\begin{aligned}
+		f(x) &= h^{(l)} \\
+		h^{(k)}(x) &= \sigma(a^{(k)}), a^{(k)} = b^{(k) + W^{(k)} h^{(k-1)}}, k \in \{1, \cdots, l\}
+	\end{aligned}
+	\end{equation*}
+	$\sigma$ is the element-wise non-linear activation function, $W^{(k)}$ is the weight matrix of the \textit{k}-th 
+	layer, and $b^(k)$ is the bias vector of the \textit{k}-th layer.
+	Suppose the loss function is described by:
+	\begin{equation*}
+		\mathcal{L}: \mathbb{R}^o \times \mathbb{R}^o \rightarrow \mathbb{R}, (\bm{\hat{y}}, \bm{y}) \mapsto 
+		\mathcal{L}(\bm{\hat{y}}, \bm{y})
+	\end{equation*}
+	where $\bm{\hat{y}} = f(\bm{x})$ is the network output and $\bm{y}$ is the target output.
+	
+	\begin{enumerate}[i)]
+		\item
+		The pseudo-code for the forward propagation algorithm is as follows:
+        \begin{algorithm}
+            \caption{Forward propagation through a typical deep neural network and the computation of the cost 
+            function. The loss $\mathcal{L}(\bm{\hat{y}}, \bm{y})$ depends on the output $\bm{\hat{y}}$ and on the 
+            target $\bm{y}$. To obtain the total cost $J$, the loss may be added to a regularizer $\Omega(\theta)$, 
+            where $\theta$ contains all the parameters (weight \& biases). Algorithm 4 shows how to compute 
+            gradients of $J$ w.r.t. parameters $\bm{W} \text{ and } \bm{b}$. For simplicity, this demonstration uses 
+            only a single input example. Practical applications should use a minibatch.}\label{forwardpropMLP}
+            \begin{algorithmic}[1]
+                \State \textbf{Require: } Network Depth, $l$
+                \State \textbf{Require: } $\bm{W^{(i)}}, i \in \{1, \cdots, l\}$ the weight matrices of the model 
+                \State \textbf{Require: } $\bm{b^{(i)}}, i \in \{1, \cdots, l\}$ the bias parameters of the model 
+                \State \textbf{Require: } $\bm{x}$, the input to process
+                \State \textbf{Require: } $\bm{y}$, the target output
+                \State $\bm{h}^{(0)} = \bm{x}$
+                \For{$k = 1, \cdots, l$}
+                \State $\bm{a}^{(k)} = \bm{b}^{(k)} + \bm{W}^{(k)} \bm{h}^{(k-1)}$
+                \State $\bm{h}^{(k)} = f(\bm{a}^{(k)})$
+                \EndFor{\textbf{end for}}
+                \State $\hat{\bm{y}} = \bm{h}^{(l)}$
+                \State $J = L(\hat{\bm{y}}, \bm{y}) + \lambda \Omega(\theta)$
+            \end{algorithmic}
+        \end{algorithm}
+        \hfill \break
+        
+        The pseudo-code for the backward propagation is as follows:
+        \begin{algorithm}
+            \caption{Backward computation for the DNN of Algorithm 3, which uses, in addition to the input $\bm{x}$, 
+            a target $\bm{y}$. This computation yields gradients on the activations $\bm{a}^{(k)}$ for each layer $k$,
+            starting from the output layer and going backwards to the first hidden layer. From these gradients which 
+            can be interpreted as an indication of how each layer's output should change to reduce error, once can 
+            obtain the gradients on the parameters of each layer. The gradients on weights and biases can be 
+            immediately used as part of a stochastic gradient update or used with other gradient-based optimization 
+            methods.}\label{backpropMLP}
+            \begin{algorithmic}[1]
+                \State After forward computation, compute the gradient on the output layer:
+                \State $\bm{g} \gets \nabla_{\hat{\bm{y}}}J = \nabla_{\hat{\bm{y}}} L(\hat{\bm{y}}, y)$
+                \For{$k = l, l-1, \cdots, 1$}
+                \State Convert the gradient on the layer's output into a gradient on the pre-nonlinearity activation (element-wise if $f$ is element-wise)
+                \State $\bm{g} \gets \nabla_{\bm{a}^{(k)}}J = \bm{g} \odot f'(\bm{a}^{(k)})$
+                \State Compute gradients on weights and biases (including the regularization term, when needed)
+                \State $\nabla_{\bm{b}^{(k)}} J = \bm{g} + \lambda \nabla_{\bm{b}^{(k)}} \Omega(\theta)$
+                \State $\nabla_{\bm{W}^{(k)}} J = \bm{g} [\bm{h}^{(k-1)}]^T + \lambda \nabla_{\bm{W}^{(k)}} \Omega(\theta)$
+                \State Propagate the gradients w.r.t the next lower-level hidden layer's activations:
+                \State $\bm{g} \gets \nabla_{\bm{h}^{(k-1)}}J = [\bm{W}^{k}]^T \bm{g}$
+                \EndFor{\textbf{end for}}
+            \end{algorithmic}
+        \end{algorithm}
+        \hfill \break
+        \newpage
+        \item
+        The computational graph for the back-prop algorithms is as follows:
+        \vspace{90 mm}
+	\end{enumerate}
+	
+	\item 
+	The algorithm performs of the order of one Jacobian product per node in the graph. By storing the values in 
+	the nodes, back-propagation avoids exponential explosion in repeated sub-expression. We might be able 
+	to avoid more subexpressions by simplifying the computational graph. We can also choose to conserve 
+	memory by recomputing rather than storing some subexpressions.
+\end{enumerate}
+
+\section*{Question 10 (Backpropagation Implementation)}
+	\begin{enumerate}[a)]
+		\item
+		Libraries such as Torch \& Caffe use the $\textbf{symbol-to-number differentiation}$ approach to 
+		back-propagation. In this approach, the libraries take a computational graph and a set of numerical 
+		values for the inputs to the graphs, then return a set of numerical values describing the gradients at 
+		those input values. \hfill \break
+		\\
+		Libraries such as Theano \& Tensorflow take a computational graph and add additional nodes to the 
+		graph that provide a symbolic description of the desired derivatives. The advantage of this approach 
+		is that the derivatives are described in the same language as the original expression. In this approach, 
+		the derivatives are just another computational graph and hence back-propagation can be run to obtain 
+		higher derivatives. This approach is called the $\textbf{symbol-to-symbol differentiation}$ approach
+		
+		\item
+		Each operation $\texttt{op}$ is also associated with a $\texttt{bprop}$ operation. This operatoin can 
+		compute a Jacobian-vector product as follows:
+		\begin{equation*}
+			\nabla_{\bm{X}} z = \sum_j (\nabla_{\bm{X}} Y_j) \frac{\partial z}{\partial Y_j}
+		\end{equation*}
+		This is how the back-propagation algorithm is able to achieve generality. Each operation is 
+		responsible for knowing how to back-propagate through the edges in the graph that participates in.
+		For example, \hfill \break \\
+		We might use a matrix multiplication operation to create a variable $\bm{C} = \bm{AB}$. Suppose that 
+		the gradient of a scalar $z$ w.r.t $\bm{C}$ is given by $\bm{G}$. The matrix multiplication operation is 
+		responsible for defining two back-propagation rules, one for each of its input argument. If we call the 
+		$\texttt{bprop}$ method to request the gradient w.r.t $\bm{A}$ given that the gradient on the output is 
+		$\bm{G}$, then the $\texttt{bprop}$ method of the matrix multiplication operation must state that the 
+		gradient w.r.t $\bm{A}$ is given by $\bm{GB}^T$. Likewise, it we call the $\texttt{bprop}$ method
+		to request the gradient w.r.t $\bm{B}$, then the matrix operation is responsible for implementing the 
+		$\texttt{bprop}$ method and specifying the desired gradient is given by $\bm{A^TG}$. The back-prop 
+		algorithm itself does not need to know any differentiation rules. It only needs to call each operation's 
+		$\texttt{bprop}$ rules with the right arguments. Formally, $\texttt{op.bprop(inputs}, \bm{X}, \bm{G})$
+		must return:
+		\begin{equation*}
+			\sum_i (\nabla_X \texttt{op.f(inputs)}_i G_i,
+		\end{equation*}
+		Here, $\texttt{inputs}$ is a list of inputs that are supplied to the operation,\\
+		$\texttt{op.f}$ is the mathematical function that the operation implements,\\
+		$\textbf{X}$ is the input whose gradient we wish to compute,\\
+		$\textbf{G}$ is the gradient on the output of the operation.
+	
+	\end{enumerate}
+\end{document}

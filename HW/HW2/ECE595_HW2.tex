@@ -1,0 +1,405 @@
+\documentclass[fleqn]{article}
+\usepackage[left=2cm, right=2cm, top=2cm, bottom=2cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amsfonts, amsthm, amssymb}
+\usepackage[super, comma]{natbib} % for bibliography stuff
+\usepackage{bibentry} % for bibliography stuff
+\usepackage[shortlabels]{enumitem} % reducing spaces in enumerated lists
+\usepackage{algorithm} % for algorithms
+\usepackage[noend]{algpseudocode} % for algorithms
+\usepackage[T1]{fontenc}
+\usepackage{bm}
+
+
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+
+\graphicspath{{figs/}}
+
+% New Operators
+\DeclareMathOperator*{\argmaxfull}{argmax}
+\DeclareMathOperator*{\argmax}{max}
+\DeclareMathOperator*{\argminfull}{argmin}
+\DeclareMathOperator*{\argmin}{min}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert} % for norm
+
+
+\title{
+  ECE 595 Machine Learning II \\
+  \large Homework 2 : Regularization of Deep Forward Networks}
+\author{Murali Krishnan Rajasekharan Pillai}
+\date{September 2019}
+
+\begin{document}
+
+\maketitle
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%              Question 1       %%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Question 1 (Definition)}
+\begin{enumerate}[a)]
+    \item 
+    For machine learning algorithms, we define \textit{regularization} as any modifications we make to the learning
+    algorithm that is intended to reduce its generalizing error, but not its training error.
+    \item %Why is regularization needed in machine learning?
+    There are many reasons why we need regularization in machine learning:
+    \begin{enumerate}
+    	\item The model needs extra constraints on the parameter values. This improves the performance of the
+	model on test data.
+	\item The model needs to encode certain specific kinds of prior knowledge. 
+	\item Sometimes the model learned should be generic. In other words to promote generalization.
+	\item Sometimes the problem is an under-determined problem. Regularization helps make it a determined 
+	problem.
+	\item Regularization methods, like ensemble methods, combine multiple hypothesis that explain the training 
+	data.
+    \end{enumerate}    
+    \item % State one regularization method used in machine learning
+    	One regularization method not mentioned in Chapter 7 is \textbf{Pooling} in Convolutional Neural Networks. 
+	By using \textit{pooling}, the output is invariant to slight spatial distortions of the input (slight changes of the 
+	location of (deep) features. Features that are sensitive to such distortions can be discarded.
+    
+\end{enumerate}
+
+\section*{Question 2 ($L^2$ Parameter regularization)}
+This is also called the \textbf{weight decay}. The objective function of a model with no bias terms can be written as:
+	\begin{equation*}
+		\tilde{J}(\mathbf{w; X, y}) = \frac{\alpha}{2}\mathbf{w^Tw} + J(\mathbf{w; X, y})
+	\end{equation*}
+where $J(.)$ is te standard objective function, $\tilde{J}(.)$ is the regularized objective function, $\alpha \in [0, \infty)$ is a hyperparameter that weights the relative contribution of the norm penalty, and $\mathbf{X} \text{ and } \mathbf{y}$ are the model inputs and outputs. The gradient of $\tilde{J}(\mathbf{w; X, y})$ w.r.t. $\textbf{w}$ is:
+	\begin{equation*}
+		\nabla_w \tilde{J}(w; X, y) = \alpha w + \nabla_w J(w; X, y)
+	\end{equation*}
+where a single gradient step to update the weights - with the learning rate $\epsilon$ - can be performed by:
+	\begin{equation*}
+		w \leftarrow (1-\epsilon \alpha) w - \epsilon \nabla_w J(w; X, y)
+	\end{equation*}
+
+%% The solutions
+\begin{enumerate}[a)]
+	\item
+	Let's make a quadratic approximation of the objective function in the neighborhood of the value of weights that obtains minimal un-regularized training cost, $w^* = \argmin_w J(w)$. Then the quadratic approximation $\hat{J}$ is given by:
+	\begin{equation*}
+		\hat{J}(\theta) = J(w^*) + \frac{1}{2} (w - w^*)^T H (w - w^*)
+	\end{equation*}
+where $H$ is the Hessian matrix of $J$ w.r.t. $w$ evaluated at $w^*$. Since this is defined near the minima, $H \succeq 0 $. The minimum of $\hat{J}$ occurs where its gradient
+	\begin{equation*}
+		\nabla_w \hat{J}(w) = H (w - w^*)
+	\end{equation*}
+is equal to 0. \\
+To study the effect of weight decay, we add the weight decay gradient. We can now solve for the minimum of the regularized version of $\hat{J}$. We use the variable $\tilde{w}$ to represent the location of the minimum:
+
+\begin{align*}
+	\alpha \tilde{w} + H(\tilde{w} - w^*) &= 0 \\
+	(H + \alpha I) \tilde{w} &= H w^*\\
+	\tilde{w} = (H + \alpha I)^{-1} Hw^*
+\end{align*}
+As $H$ is real and symmetric, we can decompose it into a diagonal matrix $\Lambda$ and an orthonormal basis of eigenvectors, $Q$, such that $H = Q\Lambda Q^T$. Applying to this decomposition, we obtain:
+
+\begin{align*}
+	\tilde{w} &= (Q \Lambda Q^T + \alpha I)^{-1} Q \Lambda Q^T w^*\\
+	&= \big[ Q(\Lambda + \alpha I)Q^T \big]^{-1} Q \Lambda Q^T w^*\\
+	&= Q(\Lambda + \alpha I)^{-1} \Lambda Q^T w^*
+\end{align*}
+
+We see that the effect of weight decay is to rescale $w^*$ along the axes defined by the eigenvectors of $H$. Specifically, the component of $w^*$ that is aligned with the $i$-th eigenvector of $H$ is rescaled by a factor of $\frac{\lambda_i}{\lambda_i + \alpha}$
+
+\item
+	Let's say that the eigenvalues of $\bm{H}$ are $ \lambda_i = \{ \lambda_1, \lambda_2, \cdots, \lambda_n \}$. There exists two extreme cases,
+	\begin{itemize}
+	\item When $\lambda_i \gg \alpha \implies \frac{\lambda_i}{\lambda_i + \alpha} \approx 1$. In this case the effect of regularization is relatively small. Hence the parameters along direction $i$ i preserved relatively intact,
+	\item The next possible scenario is when: $\lambda_i \ll \alpha \implies \frac{\lambda_i}{\lambda_i + \alpha} \approx \frac{1}{\alpha}$. Here, the components will be shrunk to nearly zero magnitude by the regularization. In directions that do not contribute to reducing the objective function, a small eigenvalue of the Hessian tells us that movement in this direction will not significantly increase the gradient. Components of the weight vector corresponding to such unimportant directions are decayed away through the use of the regularization throughout training.
+	 \end{itemize}
+	 
+	 Both these scenarios are observed when the condition number of $\bm{H}$ is high (which means that there is a large difference between the maximum and minimum eigenvalues of the $\bm{H}$). Hence we can assume that the dimensionality of the matrix used to invert during trainig is small and hence requires lesser time for training.
+	 If $\bm{H}$ has a small condition number, then all eigenvalues are of comparable values. This means that the $L^2$ regularizer has more parameters to regularize. This might increase the dimensionality of the matrix to be inverted for the training process, which in-turn increases the training time.
+	\vspace{40mm}
+\end{enumerate}
+
+\section*{Question 3 ($L^1$ Regularization)}
+\begin{enumerate}[a)]
+	\item
+	Formally, $L^1$ regularization on the model parameter $\textbf{w}$ is defined as
+	\begin{equation*}
+		\Omega(\bm{\theta}) = \norm{\textbf{w}}_1 = \sum_{i} | w_i |
+	\end{equation*}
+	The $L^1$ regularized objective function $\tilde{J}(\bm{w; X, y})$ is given by:
+	\begin{equation*}
+		\tilde{J}(\bm{w; X, y}) = \alpha \norm{\bm{w}}_1 + J(\bm{w; X, y})
+	\end{equation*}
+	with the corresponding gradient is,
+	\begin{equation*}
+		\nabla_{\bm{w}} \tilde{J}(\bm{w; X, y}) = \alpha ~ \text{sign}(\bm{w}) + \nabla_{\bm{w}} J(\bm{w; X, y})
+	\end{equation*}
+	where $\text{sign}(\bm{w})$ is simply the sign of $\bm{w}$ applied element-wise. The cost function can be approximated around the minima ($\bm{w^*}$) as,
+	\begin{equation} \label{eq:1}
+		\hat{J}(\theta) = J(w^*) + \frac{1}{2} (\bm{w - w^*})^T \bm{H} (\bm{w - w^*})
+	\end{equation}
+	The gradient of this approximation near the minima is:
+	\begin{equation*}
+		\nabla_{\bm{w}} \hat{J}(\bm{w}) = \bm{H} (\bm{w} - \bm{w^*})
+	\end{equation*}
+	where $\bm{H}$ is the Hessian matrix of $J$ w.r.t. $\bm{w}$ evaluated at $w^*$.
+	If there exists no correlation between the input features the Hessian of the objective function would be a diagonal matrix. (In practice this can be achieved through Principal Component Analysis on the input features. Therefore,
+	$$\bm{H} = \text{diag}([H_{1, 1}, \cdots H_{n, n}])$$
+	Hence, (\ref{eq:1}) can be written as:
+	\begin{align*}
+	\hat{J}(\bm{w; X, y} &= J(\bm{w^*; X, y}) + \sum_i \left[ \frac{1}{2} H_{i, i} (\bm{w}_i  - \bm{w}_i^*)^2 + \alpha |w_i| \right]\\
+	\implies \frac{d (\hat{J}(\bm{w; X, y})}{d w_i}  &= H_{i, i} w_i + \alpha \text{ sign}(w_i) - H_{i, i} w_i^*\\
+	&\implies \frac{d (\hat{J}(\bm{w; X, y})}{d w_i} = 0 && (\because \text{at minima, if possible})\\
+	&\implies H_{i, i} w_i + \alpha \text{ sign}(w_i)x = H_{i, i} w_i^*\\
+	&\implies w_i = w_i^* - \frac{\alpha}{H_{i, i}} \text{ sign}(w_i) && (\text{Equation (a)})\\
+	\end{align*}
+	If Equation (a) is true, then $\text{sign}(w_i^*) = \text{sign}(w_i)$
+	\begin{align*}
+		w_i &= w_i^* - \frac{\alpha}{H_{i, i}} \text{sign}(w_i^*)\\
+		w_i &= \text{sign}(w_i^*) \left[|w_i^*| - \frac{\alpha}{H_{i, i}}\right]
+	\end{align*}
+	If Equation (a) is not possible, 
+	The problem of minimizing this approximate cost function has an analytical solutions (for each dimension $i$), with the following form:
+	$$w_i = \text{sign}(w_i^*) \max \left\{ | w_i^*| - \frac{\alpha}{H_{i, i}}\right\}$$
+	
+	\item
+	 By inspecting the gradient, we can immediately see that the effect of $L^1$ regularization is quite different from that of $L^2$ regularization. We can see that the regularization contribution to the gradient no longer scales linearly with each $w_i$; instead it is constant factor with a sign equal to $\text{sign}(w_i)$. This promotes sparsity in the model, and this property has been extensively used as a \textbf{feature selection mechanism}. The $L^1$ penalty causes a subset of the weights to become zero, suggesting that the corresponding features may safely be discarded. 
+	 (\textit{\textbf{Interesting note}}: $L^1$ regularization can be thought of us putting a isotropic Lapace prior over the weights of the model. $\log p(w) = \sum_i \log \text{Laplace}\left(w_i; 0, \frac{1}{\alpha}\right) = -\alpha \norm{w}_1 + n\log \alpha - n \log 2$)
+
+\end{enumerate}
+
+
+\section*{Question 4 (Constrained Optimization)}
+\begin{enumerate}[a)]
+	\item
+	Penalties alone can cause non-convex optimization procedures to gets stuck in local minimal corresponding to small $\theta$. In the case of neural-networks, this manifests as a a model that trains with "dead units". These units do not contribute much to the behavior of the function learned by the netowrk because the weights going into or out of them are all very small. When training with norm penalties, these configurations can be locally optimal, even if it is possible to significantly reduce $J$ by making the weights larger.
+	\item
+	Using explicit constraints with re-projections prevent producing local optima, because they do not encourage weights to approach the origin (aka 0). Explicit constraints implemented by re-projections have an effect only when the weights become large and attempt to leave the constraint region.
+	Explicit constraints with re-projection can be useful because they impose some stability on the optimization procedure. When using high learning rates, it is possible to encounter a positive feedback loop in which large weights induce large gradients, which then induce a large update to the weights. If these updates consistently increase the size of the weights, then $\theta$ rapidly moves away from the origin until numerical overflow occurs. Explicit constraints with re-projection prevent this feedback loop from continuing to increase the magnitude of the weights without bound.
+	
+	\item 
+	
+	\textit{\textbf{Hinton et al. (2012)}} recommend the strategy of constraining the norm of each \textit{column} of the weight matrix of a neural net layer, rather than constraining the Frobenius norm of the entire weight matrix. Constraining the norm of each column separately prevents any one hidden unit from having very large weights. This constraint would be similar to the $L^2$ weight decay but with a separate KKT multiplier for the weights of each hidden unit. Each of these KKT conditions would be dynamically updated separately to make each hidden unit obey the constraint. Since this method is usually implemented as an explicit constraint with re-projection, this makes sure that the regularization effect only kicks in for each weight after a minimum threshold which is defined by the explicit constraint.
+	
+\end{enumerate}
+
+\section*{Question 5 (Regularization \& Under-Constrained Problems)}
+There are two kinds of problem in machine learning which depends on the method of solving, namely those which have \textbf{closed-form solutions} and those which are solved using an \textbf{iterative algorithm}.
+
+For the problems which have a closed-form solution, given the input matrix $\bm{X}$, solving these involve inverting the matrix $\bm{X^TX}$. This is not possible when $\bm{X^TX}$ is singular (\textit{in other words it is an under-constrained system}). $\bm{X^TX}$ is singular whenever the data-generating distribution truly has no variance in some direction, or when no variance is observed in some direction because there are fewer examples (rows of $\bm{X}$) than input features (columns of $\bm{X}$). Regularization leads to inverting the matrix $\bm{X^TX} + \alpha \bm{I}$ instead. This regularized matrix is guaranteed to be invertible.
+
+For the problems which do not have a closed form solution, iterative procedures like stochastic gradient descent will, \textit{in theory}, not halt. In practice, SGD will reach sufficiently large weights to cause numerical overflow. Most forms of regularization can guarantee the convergence of iterative methods applied to undetermined problems. For example, weight decay will cause gradient descent to quit increasing the magnitude of the weights when the slope of the likelihood is equal to the weight decay coefficient.
+This means that the regularization constrains the model to choose a more simpler model than going for more complicated model (which is in conformance with \textit{Occam's razor}).
+
+\section*{Question 6 (Dataset Augmentation \& Noise Robustness)}
+
+\begin{enumerate}[a)]
+	\item
+	In the case of image object recognition, the classifier needs to take a complicated, high-dimensional input $\bm{x}$ and summarize it with a a single category identity $y$. This means that the main task facing a classifier is to be invariant to a wide variety of transformations. Some of the operations that can be performed on images as regularization techniques are as follows:
+		\begin{enumerate}[i)]
+			\item Translating the training images a few images in each direction.
+			\item Rotating the image (such that it does not change the image class)
+			\item Scaling the image
+			\item Injecting noise into the input of a neural network
+		\end{enumerate}
+	\item
+	Data augmentation has to be done in such a way that the class of the object is not changed via augmenting the input. For example, OCR tasks require recognizing the difference between "b" and "d", and the difference between "6" and "9". So, horizontal flips and $180^{\circ}$ rotations are not appropriate ways of augmenting datasets for these tasks.
+	
+	\item
+	Let's consider the LLS cost associated with training a function $\hat{y}(\bm{x})$ that maps a set of features $\bm{x}$ to a sclar $y$. The cost between the model's predictions, $\hat{y}(x)$, and the true values, $y$ is given by:
+	$$J = \mathbb{E}_{p(x, y)}[(\hat{y}(x) - y)^2]$$
+	Let's include a random perturbation $\epsilon_{\bm{w}} \sim \mathcal{N}\left(\bm{0}, \eta \bm{I} \right)$ to the network weights. Let's say that the corresponding prediction with the random perturbation is $\hat{y}_{\epsilon_w}(x)$
+	Now we have,
+	\begin{align*}
+		\tilde{J}_{\epsilon_w} &= \mathbb{E}_{p(x, y, \epsilon_w)} \left[ ( \hat{y}_{\epsilon_w}(x) - y(x))^2\right]\\
+		&= \mathbb{E}_{p(x, y, \epsilon_w)} \left[ ( \hat{y}_{\epsilon_w}(x)^2 - 2\hat{y}_{\epsilon_w}(x) y(x) + y(x)^2\right]\\
+		&= \mathbb{E}_{p(x, y, \epsilon_w)} \left[ ( \hat{y}(x) + \epsilon_w x)^2 - 2(\hat{y}(x) +\epsilon_w w) y(x) + y(x)^2\right] && (\because  \hat{y}_{\epsilon_w} = \hat{y} + \epsilon_w x)\\
+		&= \mathbb{E}_{p(x, y, \epsilon_w)} \left[ \hat{y}(x)^2 + (\epsilon_w x)^2 + 2 \hat{y}(x) \epsilon_w x- 2\hat{y}(x) y(x) -\epsilon_w w y(x) + y(x)^2\right]\\
+		&=  \mathbb{E}_{p(x, y, \epsilon_w)} \left[ \hat{y}(x)^2 - 2\hat{y}(x) y(x) + y(x)^2\right] + \mathbb{E}_{p(x, y, \epsilon_w)} \left[ (\epsilon_w x)^2 + 2 \hat{y}(x) \epsilon_w x -\epsilon_w w y(x) \right] \\
+		&= \mathbb{E}_{p(x, y, \epsilon_w)} \left[ (\hat{y}(x)- y(x))^2\right] + \mathbb{E}_{p(x, y, \epsilon_w)} \left[ \epsilon_w ^2 \right] \cdot \mathbb{E}_{p(x, y, \epsilon_w)} \left[ x^2 \right]\\
+		&=  \mathbb{E}_{p(x, y, \epsilon_w)} \left[ (\hat{y}(x)- y(x))^2\right] + \bm{\eta \mathbb{E}_{p(x, y, \epsilon_w)} \left[ \norm{\nabla_w \hat{y}(x)}^2_2 \right]}
+	\end{align*}
+	As we can see here, by adding the noise to the weights, we \textit{essentially} add a \textbf{regularization term} to the objective function where no noise is added to the weights. This discourages a prediction that is sensitive to small changes in $\bm{w}$.
+	
+	\item 
+	\textit{Label smoothing} is a regularization method used to make the model robust to uncertainties in the labels for the dataset. 
+	The straight-forward way to achieve this is by assuming a small constant probability $\epsilon$, the training set label $y$ is correct with probability $1-\epsilon$, and otherwise any of the other possible labels might be correct. This assumptions can be incorporated into the cost function analytically, rather than by explicitly  drawing noise samples. For example, \textbf{label smoothing} regularizes a model based on a softmax with $k$ output values by replacing the hard $0$ and $1$ classification targets with targets of $\frac{\epsilon}{k-1}$ and $1 - \epsilon$, respectively. Label smoothing has the advantage of preventing the pursuit of hard probabilities without discouraging correct classification.
+	The softmax function is defined as 
+	\begin{equation*}
+		\sigma(\bm{z}_i) = \frac{e^{\bm{z}_i}}{\sum_{j=1}^K e^{\bm{z}_j}} \text{ for } i = 1, \cdots, K \text{ and } \bm{z} = (z_1, \cdots, z_K) \in \mathbb{R}^K
+	\end{equation*}
+	The softmax function essentially represents $p_{\text{model}}(\bm{y}|\bm{x}, \bm{\theta})$. The softmax-function with the cross-entropy loss basically incorporates the model of label noise, rather than sampling independently. 
+\end{enumerate}
+
+
+\section*{Question 7 (Generative Training)}
+
+\begin{enumerate}[a)]
+	\item 
+	\textbf{Generative training} explicitly models the actual distribution of each class. This model learns the joint probability distribution $p(x, y)$, where $x$ is the input features and $y$ is the associated label. It predicts the conditional probability with the help of Bayes Theorem.
+	
+	\textbf{Discriminative training} models the decision boundary between classes. This model learns the conditional probability distribution $p(y|x)$.
+	
+	Let's make this definition a bit more formal:
+	Training a classifier involves estimating $f : \mathcal{X} \rightarrow \mathcal{Y}$ or $P
+	(Y|X)$
+	In the generative models,
+	\begin{itemize}
+		\item Assume some functional form for $\bm{P(y), P(X|y)}$
+		\item Estimate parameters for $\bm{P(y), P(X|y)}$ from the training data
+		\item Use Bayes rule to calclate $\bm{P(y|X)}$
+		\item eg: Naive Bayes, Bayesian Networks, Markov Random Fields, Hidden Markov models
+	\end{itemize}
+	
+	In the discriminative models,
+	\begin{itemize}
+		\item Assume some functional form for $\bm{P(y|X)}$
+		\item Estimate parameters for $\bm{P(y|X)}$ from the training data
+		\item eg: Logistic Regression, SVMs, Neural Networks
+	\end{itemize}
+
+	However, at the end of the day both models predict the conditional probability $p(\text{label} | \text{data})$, but both models learn different probabilities.
+	
+	\item
+	\begin{enumerate}[i)]
+		\item 
+		In \textbf{Semi-Supervised Learning (SSL)} both unlabeled examples from $P(x)$ and labeled examples from $P(x, y)$ are used to estimate $P(y|x)$, or predict $\bm{y}$ from $\bm{x}$.
+		Typically, in semi-supervised learning we provide much more unlabelled data than labelled data. It has a generative component (the unsupervised learning) which learns a representation such that similar inputs have similar representations in the representations space. The discriminative component, then uses these representations to build the classification boundaries between the classes.
+		However, SSL can be achieved by constructing models where generative model of either $P(\bm{x})$ or $P(\bm{x, y})$ shares parameters with a discriminative model of $P(\bm{y|x})$. Then, the supervised criteria $-\log P(y|x)$ can be traded of with the unsupervised or generative criteria $-\log P(x) \text{ or } -\log P(x, y)$. The generative criteria then expresses a particular form of prio belief about the solution to the supervised learning problem, namely the structure of $P(x)$ is connected to the structure of $P(y|x)$ in away that is captured by the shared parameterization.
+		\item 
+		\textbf{Multi-task Learning} is a way to improve the generalization by pooling the examples (which can be seen as soft constraints imposed on the parameters) arising out of several tasks.
+		\vspace{40mm} \\
+		The above figure illustrates a very common form of multi-task learning, in which different supervised tasks (predicting $\bm{y}^{(i)}$ share the same input $\bm{x}$, as well as some intermediate-level representation $\bm{h}^{(shared)}$, capturing a common pool of factors. Improved generalization and generalization error bounds can be achieved because of the shared parameters, for which statistical strength can be greatly improved. However, this is only valid if some assumptions about the statistical relationship between the different tasks are valid, meaning that there is something shared across some of the tasks. 
+		
+		The intermediate hidden layers, (represented by $h^{(\text{shared})}$) is essentially a generative task as there is no labelled data for the model to learn from. The later layers which correspond to specific tasks are basically discriminative part of the model which learns a discriminative function to distinguish between the various tasks.
+		\item 
+		A popular way to regularize a model is to use constraints, particularly by forcing sets of parameters to be equal. This method of regularization is often referred to as \textbf{parameter sharing}, because we interpret the various models or model components as sharing a unique set of parameters. 
+		Here the update/learning of intermediate shared layers, (represented by $h^{(\text{shared})}$) is essentially a generative task as there is no labelled data for the model to learn from. The upper layers of the Neural network which correspond to specific tasks are basically the discriminative part of the model which learns a discriminative function to distinguish between the various tasks.
+	\end{enumerate}
+\end{enumerate}
+
+
+\section*{Question 8 (Early Stopping)}
+\begin{enumerate}[a)]
+	\item 
+	A validation set is one of the two disjoint sets created by splitting the training data. The other subset is used to learn the parameters. The validation set is is used to estimate the generalization error during or after training, allowing for hyper-parameters to be updated accordingly. In simple words, validation set is used to guide the selection of the hyper-parameters which cannot be tuned during the training operation. Since the validation set is used to "train" the hyper-parameters, the validation set error will underestimate the generalization error.
+	
+	The test set is is composed of examples coming from the same distribution as the training set and is used to estimate the generalization error of a learner, after the learning process has completed. This dataset cannot be used to make any choices about the model, including the model's hyper-parameters. For this reason, no example of the test set can be used in the validation set.
+	
+	\item 
+	When training large models with sufficient representation capacity to overfit the task, the training error decreases over time, but validation set error begins to rise again. % Draw example
+	\vspace{40mm}
+	This means that we can obtain a model with better validation set error (and thus \textit{hopefully} better test set error) by returning to the parameter setting at the point in time with the lowest validation set error. Every-time the error on the validation set improves, a copy of the model parameters are stored. When the training algorithm terminates, we return these parameters rather than the latest parameters. The algorithm terminates when no parameters have improves over the best recorded validation set error for some pre-specified number of iteration. This strategy is known as \textbf{early stopping}. It is a very efficient hyper-parameter selection algorithm. Through early-stopping the effective capacity of the model is controlled by determining how many steps it can take to fit the training set.
+	
+	\item 
+	The challenge in \textbf{re-training} with the added dataset is that there is no good way of knowing whether to retrain for the same number of parameter updates or the same number of passes through the dataset. This is because, in the second round of training, each pass through the dataset will require more parameter updates as the training set is bigger, hence it is unsure if the number of parameter updates is valid anymore for the larger dataset. A common method people use is by having the same number of passes over the larger dataset.
+	
+	\item 
+	The challenge in \textbf{resuming training} rather than re-training is that, there no longer exists a guide for when to stop in terms of a number of steps. One way to overcome this challenge is to monitor the average loss function on the validation set and continue training until it falls below the value of the training set objective at which the early stopping procedure halted. This strategy avoids the high cost of retraining the model from the scratch, but is not as well-behaved.
+\end{enumerate}
+
+
+\section*{Question 9 (Early Stopping as an $L^2$ Regularizer)}
+\vspace{40 mm}
+
+To compare Early-stopping with the classical $L^2$ regularization, let's examine the setting where the only parameters are linear weights. In the neighborhood of the empirically optimal value of the weights $\bm{w^*}$, we can model the cost function $J$ with a quadratic approximation as:
+\begin{equation*}
+	\hat{J}(\bm{\theta}) = J(\bm{w^*}) + \frac{1}{2}(\bm{w} - \bm{w^*})^T \bm{H} (\bm{w} - \bm{w^*})
+\end{equation*}
+where $\bm{H}$ is the Hessian matrix of $J$ w.r.t to $\bm{w}$ evaluated at $\bm{w^*}$. Given the assumption that $\bm{w^*}$ is a minimum of $J(\bm{w})$, $\bm{H}$ is positive semi-definite.
+
+Under a local Taylor series approximation, the gradient is given by
+\begin{equation*}
+	\nabla_{\bm{w}} \hat{J}(\bm{w}) = \bm{H}(\bm{w} - \bm{w^*})
+\end{equation*}
+
+Following the trajectory followed by the parameter vector during training. Let's assume that the initial parameter vector to the origin $\bm{w}^{(0)} = \bm{0}$. Let us study the approximate behavior of the gradient descent on $J$ by analyzing gradient descent on $\hat{J}$:
+\begin{align*}
+\bm{w}^{(\tau)} &= \bm{w}^{(\tau - 1)} - \epsilon \nabla_{\bm{w}} \hat{J}(\bm{w}^{(\tau - 1)})\\
+&=  \bm{w}^{(\tau - 1)} - \epsilon \bm{H} (\bm{w}^{(\tau - 1)} - \bm{w}^*) \\
+\bm{w}^{\tau} - \bm{w^*} &= (\bm{I} - \epsilon \bm{H})(\bm{w}^{(\tau - 1)} - \bm{w}^*)
+\end{align*}
+Re-writing the above equations in the space of the eigenvectors of $\bm{H}$, exploiting the eigen-decomposition of $\bm{H} : \bm{H} = \bm{Q \Lambda} \bm{Q}^T$, where $\bm{\Lambda}$ is a diagonal matrix and $\bm{Q}$ is an orthonormal basis of eigenvectors.
+\begin{align*}
+	\bm{w}^{(\tau)} - \bm{w^*} &= (\bm{Q}\bm{Q}^T - \epsilon \bm{Q \Lambda} \bm{Q}^T)(\bm{w}^{(\tau -1)} - \bm{w^*})\\
+	\bm{Q}^T (\bm{w}^{(\tau)} - \bm{w^*}) &= (\bm{I} - \epsilon \bm{\Lambda})\bm{Q}^T(\bm{w}^{(\tau -1)} - \bm{w^*})
+\end{align*}
+Assuming that $\bm{w}^{(0)} = 0$ and that $\epsilon$ is chosen to be small enough to guarantee $|1 - \epsilon \lambda_i | < 1$, the parameter trajectory during training after $\tau$ parameter updates is:
+\begin{equation} \label{early_stopping}
+	\bm{Q}^T\bm{w}^{(\tau)} = [\bm{I} - (\bm{I} - \epsilon \Lambda)^{\tau}]\bm{Q}^T \bm{w}^*
+\end{equation}
+
+The expression for $\bm{Q}^T \bm{\tilde{w}}$ for $L^2$ regularization can be re-arranged as:
+\begin{align}
+	\bm{Q}^T\bm{\tilde{w}} &= (\Lambda + \alpha \bm{I})^{-1} \bm{\Lambda}\bm{Q}^T \bm{w^*} \nonumber \\
+	\bm{Q}^T\bm{\tilde{w}} &= (\Lambda + \alpha \bm{I})^{-1} [(\bm{\Lambda} + \alpha \bm{I}) - \alpha \bm{I}]\bm{Q}^T \bm{w^*} \nonumber \\
+	\bm{Q}^T\bm{\tilde{w}} &=  [\bm{I}- \alpha (\Lambda + \alpha \bm{I})^{-1}]\bm{Q}^T \bm{w^*} \label{l2_equation}\\
+\end{align}
+
+Comparing equation (\ref{early_stopping}) \& (\ref{l2_equation}), if we choose $\epsilon, \alpha \text{ and }\tau$ such that:
+\begin{equation} \label{l2_equivalence}
+	(\bm{I} - \epsilon \Lambda)^{\tau} = (\Lambda + \alpha \bm{I})^{-1} \alpha
+\end{equation}
+then $L^2$ regularization and early stopping can be seen as equivalent (under the quadratic approximation of the objective function). Going further, for each row $i$ in (\ref{l2_equivalence}), we can write
+\begin{align*}
+	(1 - \epsilon \lambda_i)^{\tau} &= (\lambda_i + \alpha)^{-1} \alpha\\
+	\tau \log (1 - \epsilon \lambda_i) &= (-1) \log (\frac{\lambda_i}{\alpha} + 1 ) \\
+	\tau (\epsilon \lambda_i) &\approx (-1) \frac{-\lambda_i}{\alpha} && (\because \log (1-x) \approx x ) \\
+	\alpha &\approx \frac{1}{\epsilon \tau}
+\end{align*}
+Under these assumptions, the number of training iterations $\tau$ plays a role inversely proportional to the $L^2$ regularization parameter, and the inverse of $\tau \epsilon$ plays the role of the weight decay coefficient.
+
+\section*{Question 10 (Bootstrap Aggregating (Bagging) and Boosting)}
+
+\begin{enumerate}[a)]
+	\item 
+	\textbf{Bagging} (short for \textbf{bootstrap aggregating}) is a technique for reducing the generalization error by combining several models. The idea is to train several different models separately, then have all the models vote on the output for test examples. Bagging allows the use of same kind of model, training algorithm and objective function to be reused several times.
+	Specifically, bagging involves constructing $k$ different datasets. Each dataset has the same number of examples as the original dataset, but each dataset is constructed by sampling with replacement from the original dataset. This means that, with high probability, each dataset is missing some of the examples from the original dataset and contains several duplicate examples. The differences between which examples are included in each dataset result in differences between the trained models. \hfill \break \\
+	Since the representations learned by different models depend on the difference in the datasets, it is not possible to make \textit{baggging} useful when the entire training set is used to train all the models.  In this case the various models learn very similar representations of the data, that the advantage of bagging is missed.
+	
+	\item 
+	Boosting refers to the technique of constructing ensembles with higher capacity than the individual models. 
+	Boosting has been applied in interpreting an individual neural network as an ensemble by incrementally adding hidden units to the network.
+	
+\end{enumerate}
+
+\section*{Question 11 (Dropout)}
+\begin{enumerate}[a)]
+	\item
+	\textit{\textbf{Dropout}} was introduced as a computationally inexpensive but powerful method of regularizing a broad family of models. It provides an inexpensive approximation to training and evaluating a bagged ensemble of exponentially many neural networks. In most modern neural networks, based on a series of affine transformations and nonlinearities, we can effectively remove a unit from a network by multiplying its output value by zero. This results in a set of possible sub-networks from the original neural network (an ensemble of subnetworks). Dropout trains the ensemble consisting of all subnetworks that can be formed by removing non-output units from an underlying base network by applying these random \textbf{binary masks}. In practice, each time an example  is loaded into a mini-batch, a random binary mask is applied to all input and hidden units in the network. This creates an ensemble of the subnetworks, on which the forward propagation, back-propagation and the learning update is performed as usual.
+	
+	\item
+	In \textbf{Dropout}, the ensemble of sub-network models share parameters, with each model inheriting a different subset of parameters from the parent neural network. This parameter sharing makes it possible to represent an exponential number of models with a tractable amount of memory. Additionally, most models are not trained explicitly due to the size of parent network. Instead, a tiny fraction of the possible subnetworks are each trained for a single step, and the parameter sharing causes the remaining subnetworks to arrive at good settings of the parameters. \hfill \break
+	
+	In \textbf{bagging}, $k$ different models are defined and $k$ different datasets  are created by  sampling from the training set with replacement. Then the $i^{\text{th}}$ model is trained on the $i^{\text{th}}$ dataset. These models are independently defined with no parameter sharing. Contrary to \textit{dropout}, each model is also trained to convergence on it's respective training dataset. Due to the definition of the independent models, large number of subnetworks cannot be "learned" because it is not possible to achieve in a tractable amount of memory. Finally to make a prediction the \textit{bagged ensemble} should accumulate votes from all its members.
+	
+\end{enumerate}
+
+\section*{Question 12 (Dropout Continued)}
+\begin{enumerate}[a)]
+	\item
+	In dropout, each sub-model defined by a mask vector $\bm{\mu}$ defines a probability distribution $p(y | x, \bm{\mu})$. The geometric mean of the ensemble members' predicted distributions can provide a good approximation to the predictions of the ensemble (\textit{in lieu} of arithmetic mean which can become intractable in large networks). To guarantee that the geometric mean is a valid probability distribution, the sub-models cannot assign a 0 probability to any event. The un-normalized probability distribution defined directly by the geometric mean is given by
+	\begin{equation*}
+		\tilde{p}_{\text{ensemble}} (y|\bm{x}) = \sqrt [2^d]{\prod_{\bm{\mu}} p(y | \bm{x, \mu})},
+	\end{equation*}
+	where $d$ is the number of units that may be dropped. To make the predictions, the probabilities should  be renormalized:
+	\begin{equation*}
+		p_{\text{ensemble}}(y | \bm{x}) = \frac{\tilde{p}_{\text{ensemble}} (y | \bm{x}) } { \sum_{y'} \tilde{p}_{\text{ensemble}} (y' | \bm{x})}
+	\end{equation*}
+	
+	This brings us to the \textbf{\textit{weight scaling inference rule}}, a key insight involved in dropout is that we can approxmiate $p_{\text{ensemble}}$ by evaluating $p(y|\bm{x})$ in one model: the model with all units, but with the weights going out of unit $i$ multiplied by the probability of including unit $i$. The motivation for this modification is to capture the right expected value of the output from that unit.\hfill \break
+	\textit{Goodfellow et al (2013a)} found that weight scaling approximation can work better than Monte Carlo approximations to the ensemble predictor. This held true even when the MC approximation was allowed to sample upto 1,000 subnetworks. The comparison was done in terms of \textbf{classification accuracy}.
+	\item
+	\begin{enumerate}
+		\item
+		\textbf{Dropout boosting}  is an algorithm that injects exactly the same noise as DropOut. The objective function for each (sub-network, example) pair in dropout-boosting is the likelihood of the data according to the ensemble; however only the parameters of the current sub-network maybe updated for each example. Ordinary dropout performs bagging by maximizing the likelihood of the correct target for the current example under the current sub-netwrok, whereas dropout boosting takes into account the contributions of other subnetworks, in a manner reminiscent of boosting. 
+		\item
+		\textbf{DropConnect} is a method which works similar to DropOut and is intended to prevent the "co-adaptation" of units in the neural network. It is very similar to DropOut and can be thought of as a more general form of DropOut. In DropConnect, we apply the binary mask to individual weights of the network rather than the individual nodes. In this case the node can remain partially active, unlike in DropOut.
+		\vspace{40mm}
+		
+		\item 
+		Instead of using a binary mask $\bm{\mu}$ (or for that matter any finite number of values for $\bm{\mu}$), \textit{Srivastava et al. (2014)} showed that multiplying the weights by $\mu \sum \mathcal{N}(\bm{1, I})$ can outperform DropOut based on binary masks. Since $\mathbb{E}[\bm{\mu}] = \bm{1}$, the standard network automatically implements approximate inference in the ensemble, without needing any weight scaling.
+		
+	\end{enumerate}
+\end{enumerate}
+
+
+\end{document}
